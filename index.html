@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>부모님 건강검진 수첩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column like a clinic booklet — parent tabs, profile strip, section switcher, then rows */
+:root {
+  --bg: #f6f8f7;
+  --paper: #ffffff;
+  --ink: #17302b;
+  --muted: #5c706b;
+  --line: #dbe4e1;
+  --accent: #1f6f5c;
+  --accent-soft: #e2f0eb;
+  --due: #b4361f;
+  --due-soft: #fbe9e4;
+  --soon: #8a5a00;
+  --soon-soft: #fbf0d6;
+  --ok: #1f6f5c;
+  --ok-soft: #e2f0eb;
+  --idle: #5c706b;
+  --idle-soft: #edf1f0;
+  --s1: #c2410c;  /* 차트 시리즈 1: 수축기 */
+  --s2: #2f5fd0;  /* 차트 시리즈 2: 이완기·단일 수치 */
+  --f-display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101816; --paper: #17211f; --ink: #e3ece9; --muted: #98aba6; --line: #2a3835;
+    --accent: #6cc4a8; --accent-soft: #1c3530;
+    --due: #f08a72; --due-soft: #3a1f19; --soon: #e8b850; --soon-soft: #352a12;
+    --ok: #6cc4a8; --ok-soft: #1c3530; --idle: #98aba6; --idle-soft: #1f2a28;
+    --s1: #dc6430; --s2: #557fe6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101816; --paper: #17211f; --ink: #e3ece9; --muted: #98aba6; --line: #2a3835;
+  --accent: #6cc4a8; --accent-soft: #1c3530;
+  --due: #f08a72; --due-soft: #3a1f19; --soon: #e8b850; --soon-soft: #352a12;
+  --ok: #6cc4a8; --ok-soft: #1c3530; --idle: #98aba6; --idle-soft: #1f2a28;
+  --s1: #dc6430; --s2: #557fe6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--ink); font-family: var(--f-body);
+  font-size: 16px; line-height: 1.6;
+}
+.wrap {
+  max-width: 760px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+header { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(28px, 6vw, 36px); line-height: 1.25; margin: 0; text-wrap: balance; }
+.sync { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }
+.sync.live::before { background: var(--ok); }
+.sync.err::before { background: var(--due); }
+.backup { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.backup h2 { margin: 0; font-size: 16px; }
+.backup p { margin: 0; font-size: 14px; color: var(--muted); }
+.backup-msg { font-size: 14px; }
+.backup-msg.err { color: var(--due); }
+
+/* parent tabs */
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tab {
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.tab[aria-selected="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tab-name { font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+.tab-age { font-size: 14px; color: var(--muted); }
+.tab-count { font-size: 14px; }
+.tab-count b { font-family: var(--f-num); color: var(--due); font-weight: 500; }
+.tab-count.clear { color: var(--ok); }
+
+/* profile */
+.profile { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.profile > summary { font-size: 15px; color: var(--muted); font-weight: 600; cursor: pointer; }
+.profile[open] > summary { margin-bottom: 4px; }
+.profile-body { display: flex; flex-direction: column; gap: 12px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label, .field .lab { font-size: 13px; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; min-height: 42px; width: 100%;
+}
+.checks { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.check { display: flex; align-items: center; gap: 8px; }
+.check input { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent); }
+.check label { font-size: 15px; color: var(--ink); }
+.example-note { font-size: 14px; background: var(--soon-soft); color: var(--soon); border-radius: 8px; padding: 8px 12px; }
+.year-note { font-size: 15px; background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; }
+.year-note b { color: var(--accent); }
+
+/* section switcher */
+.views { display: flex; gap: 4px; background: var(--idle-soft); border-radius: 12px; padding: 4px; }
+.view-btn {
+  flex: 1; font: inherit; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer;
+  background: transparent; border: 0; border-radius: 9px; min-height: 44px; padding: 6px 8px;
+}
+.view-btn[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.view-btn .badge { font-family: var(--f-num); font-size: 12px; color: var(--due); margin-left: 4px; }
+
+/* groups */
+.stack { display: flex; flex-direction: column; gap: 28px; }
+section.group { display: flex; flex-direction: column; gap: 10px; }
+.group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink); padding-bottom: 6px; }
+.group-head h2 { font-family: var(--f-display); font-size: 22px; margin: 0; }
+.group-head span { font-size: 13px; color: var(--muted); }
+.rows { display: flex; flex-direction: column; }
+.row { border-bottom: 1px solid var(--line); padding-block: 14px; display: flex; flex-direction: column; gap: 10px; }
+.row-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.row-title { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row-title strong { font-size: 17px; font-weight: 600; }
+.row-title small { font-size: 14px; color: var(--muted); }
+.pill { flex: none; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.due { background: var(--due-soft); color: var(--due); }
+.pill.soon { background: var(--soon-soft); color: var(--soon); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.idle { background: var(--idle-soft); color: var(--idle); }
+.row-meta { font-size: 14px; color: var(--muted); }
+.row-edit { display: grid; grid-template-columns: 170px 1fr auto; gap: 8px; align-items: end; }
+.row-edit .field label { font-size: 12px; }
+.btn {
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; min-height: 42px;
+  border-radius: 8px; padding: 8px 14px; border: 1.5px solid var(--accent);
+  background: var(--paper); color: var(--accent); white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); color: var(--paper); }
+.btn.primary:hover { opacity: .9; }
+.btn.quiet { border-color: var(--line); color: var(--muted); font-weight: 500; font-size: 14px; min-height: 36px; padding: 4px 10px; }
+.btn.quiet.armed { border-color: var(--due); color: var(--due); }
+.hidden-list summary { cursor: pointer; font-size: 14px; color: var(--muted); padding-block: 8px; }
+.hidden-list ul { margin: 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.empty { font-size: 15px; color: var(--muted); background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 18px 16px; }
+.form { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.form h3 { margin: 0; font-size: 16px; }
+.form-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.form-msg { font-size: 14px; color: var(--due); }
+
+/* meds */
+.daily { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.slot { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.slot-name { font-size: 13px; color: var(--muted); font-weight: 600; }
+.slot ul { margin: 0; padding: 0; list-style: none; font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.slot li { overflow-wrap: anywhere; }
+.slot .none { color: var(--muted); font-size: 14px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 13px; background: var(--idle-soft); color: var(--ink); border-radius: 6px; padding: 1px 8px; }
+.med-edit { display: grid; grid-template-columns: 170px auto auto; gap: 8px; align-items: end; justify-content: start; }
+
+/* vitals */
+.vcard { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.vtitle { font-size: 15px; color: var(--muted); font-weight: 600; }
+.vlatest { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.vlatest .big { font-family: var(--f-num); font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.vlatest .unit { font-size: 14px; color: var(--muted); }
+.vlatest .when { font-size: 13px; color: var(--muted); width: 100%; }
+.legend { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart { position: relative; width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--paper);
+  font-size: 13px; line-height: 1.4; padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -100%);
+}
+.vlog summary { cursor: pointer; font-size: 14px; color: var(--muted); }
+.vtable-wrap { overflow-x: auto; }
+.vtable { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.vtable th { text-align: left; color: var(--muted); font-weight: 500; font-size: 13px; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); }
+.vtable td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.vtable td.n { font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.guide { font-size: 13px; color: var(--muted); }
+
+footer { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 16px; }
+footer a { color: var(--accent); }
+@media (max-width: 560px) {
+  .row-edit { grid-template-columns: 1fr 1fr; }
+  .row-edit .memo { grid-column: 1 / -1; order: 3; }
+  .daily { grid-template-columns: 1fr 1fr; }
+  .med-edit { grid-template-columns: 1fr auto; }
+  .med-edit .field { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: no-preference) { .tab, .view-btn { transition: border-color .15s, box-shadow .15s, background .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow" id="today"></span>
+    <h1>부모님 건강검진 수첩</h1>
+    <span class="sync" id="sync">불러오는 중</span>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="부모님 선택" id="tabs"></div>
+
+  <details class="profile" id="profile"></details>
+
+  <div class="views" role="tablist" aria-label="보기 선택" id="views"></div>
+
+  <div class="stack" id="main"></div>
+
+  <section class="backup" aria-labelledby="backup-title">
+    <h2 id="backup-title">백업과 다른 기기로 옮기기</h2>
+    <p>기록은 지금 쓰는 브라우저에만 저장돼요. 백업 파일을 저장해 두면, 다른 컴퓨터나 휴대폰에서 '백업 불러오기'로 같은 기록을 볼 수 있어요. 브라우저 기록을 지우기 전에도 꼭 백업하세요.</p>
+    <div class="form-actions">
+      <button type="button" class="btn" id="backup-save">백업 파일 저장</button>
+      <label class="btn" for="backup-file">백업 불러오기</label>
+      <input type="file" id="backup-file" accept=".json,application/json" hidden>
+    </div>
+    <div class="form-actions" id="backup-confirm" hidden>
+      <span class="backup-msg" id="backup-confirm-text"></span>
+      <button type="button" class="btn primary" id="backup-apply">이 기록으로 바꾸기</button>
+      <button type="button" class="btn quiet" id="backup-cancel">취소</button>
+    </div>
+    <span class="backup-msg" id="backup-msg"></span>
+  </section>
+
+  <footer>
+    <span>국가건강검진 대상과 주기는 2026년 국민건강보험공단 기준의 일반 안내입니다. 정확한 대상 여부는 공단 우편 안내문이나 'The건강보험' 앱에서 확인하세요.</span>
+    <span>검진기관 찾기·대상 조회: <a href="https://www.nhis.or.kr" target="_blank" rel="noopener">국민건강보험공단 nhis.or.kr</a> · 고객센터 1577-1000</span>
+    <span>수치 판정 기준은 대한고혈압학회·대한당뇨병학회·한국지질동맥경화학회의 일반 기준이며, 담당 의사의 판단이 우선입니다.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const NOW = new Date();
+  const YEAR = NOW.getFullYear();
+  const TODAY = iso(NOW);
+
+  // ---- 검진 항목 정의 ----
+  // interval: 개월 (0 = 평생 1회). biennial: 출생연도 짝/홀에 맞춰 2년마다 국가검진.
+  const ITEMS = [
+    { g: "nat", k: "general", name: "일반건강검진", desc: "혈압·혈액·소변·흉부X선·이상지질혈증", interval: 24, biennial: true, ok: p => p.age >= 20 },
+    { g: "nat", k: "gastric", name: "위암 검진", desc: "위내시경 (또는 위장조영)", interval: 24, biennial: true, ok: p => p.age >= 40 },
+    { g: "nat", k: "colon", name: "대장암 검진", desc: "분변잠혈검사, 양성이면 대장내시경", interval: 12, ok: p => p.age >= 50 },
+    { g: "nat", k: "liver", name: "간암 검진", desc: "간초음파 + 혈액검사 (B·C형간염, 간경변 등 고위험군)", interval: 6, ok: p => p.age >= 40 && p.liver },
+    { g: "nat", k: "breast", name: "유방암 검진", desc: "유방촬영술", interval: 24, biennial: true, ok: p => p.sex === "F" && p.age >= 40 },
+    { g: "nat", k: "cervix", name: "자궁경부암 검진", desc: "자궁경부세포검사", interval: 24, biennial: true, ok: p => p.sex === "F" && p.age >= 20 },
+    { g: "nat", k: "lung", name: "폐암 검진", desc: "저선량 흉부CT (만 54~74세, 30갑년 이상 흡연력)", interval: 24, biennial: true, ok: p => p.age >= 54 && p.age <= 74 && p.smoker },
+    { g: "nat", k: "bone", name: "골밀도 검사", desc: "국가검진은 여성 만 54·60세, 이후엔 2년마다 권장", interval: 24, ok: p => p.sex === "F" && p.age >= 54 },
+    { g: "nat", k: "cognitive", name: "인지기능장애 검사", desc: "치매 선별 설문 (만 66세 이상)", interval: 24, biennial: true, ok: p => p.age >= 66 },
+    { g: "nat", k: "physical", name: "노인신체기능검사", desc: "낙상 위험 평가 (만 66·70·80세)", interval: 48, ok: p => p.age >= 66 },
+    { g: "nat", k: "mental", name: "정신건강검사", desc: "우울증 선별 (만 20~70세, 10년마다)", interval: 120, ok: p => p.age >= 20 && p.age <= 79 },
+    { g: "nat", k: "dental", name: "구강검진", desc: "치아·잇몸 상태 확인", interval: 24, biennial: true, ok: p => p.age >= 20 },
+
+    { g: "add", k: "colonoscopy", name: "대장내시경", desc: "용종이 없었다면 5년마다", interval: 60, ok: p => p.age >= 50 },
+    { g: "add", k: "eye", name: "안과 검진", desc: "녹내장·백내장·황반변성 (당뇨가 있으면 필수)", interval: 12, ok: p => p.age >= 40 },
+    { g: "add", k: "hearing", name: "청력 검사", desc: "보청기 필요 여부 확인", interval: 24, ok: p => p.age >= 60 },
+    { g: "add", k: "heart", name: "심장·경동맥 초음파", desc: "고혈압·당뇨·고지혈증이 있으면 의사와 상의", interval: 24, ok: p => p.age >= 60 },
+    { g: "add", k: "psa", name: "전립선 검사 (PSA)", desc: "혈액검사, 배뇨 불편이 있으면 바로", interval: 24, ok: p => p.sex === "M" && p.age >= 50 },
+    { g: "add", k: "thyroid", name: "갑상선 초음파", desc: "증상이나 가족력이 있을 때", interval: 24, ok: p => p.age >= 40 },
+
+    { g: "vac", k: "flu", name: "독감 예방접종", desc: "매년 10~11월, 만 65세 이상 무료", interval: 12, ok: p => p.age >= 50 },
+    { g: "vac", k: "covid", name: "코로나19 예방접종", desc: "가을·겨울 절기마다, 만 65세 이상 무료", interval: 12, ok: p => p.age >= 65 },
+    { g: "vac", k: "pneumo", name: "폐렴구균 예방접종", desc: "만 65세 이상 1회 무료 (PPSV23)", interval: 0, ok: p => p.age >= 65 },
+    { g: "vac", k: "shingles", name: "대상포진 예방접종", desc: "만 50세 이상 권장 (유료, 일부 지자체 지원)", interval: 0, ok: p => p.age >= 50 },
+    { g: "vac", k: "td", name: "파상풍(Td/Tdap)", desc: "10년마다 추가접종", interval: 120, ok: p => p.age >= 20 },
+  ];
+  const GROUPS = [
+    { g: "nat", title: "국가건강검진", sub: "공단 부담, 본인 부담 없음 (암검진 일부 10%)" },
+    { g: "add", title: "추가로 챙길 검사", sub: "비급여·유료, 나이에 따라 권장" },
+    { g: "vac", title: "예방접종", sub: "보건소·지정 의료기관" },
+  ];
+
+  // ---- 건강 수치 정의 ----
+  // cut: [주의 시작, 높음 시작]. 혈압은 수축기/이완기 각각.
+  const VT = {
+    bp:      { name: "혈압", unit: "mmHg", two: true, labels: ["수축기", "이완기"], cut: [120, 140], cut2: [80, 90], ref: [[140, "수축기 140"], [90, "이완기 90"]], words: ["정상", "주의", "고혈압"], step: 1 },
+    glucose: { name: "공복혈당", unit: "mg/dL", cut: [100, 126], ref: [[126, "당뇨 기준 126"]], words: ["정상", "공복혈당장애", "당뇨 의심"], step: 1 },
+    a1c:     { name: "당화혈색소", unit: "%", cut: [5.7, 6.5], ref: [[6.5, "당뇨 기준 6.5"]], words: ["정상", "당뇨 전단계", "당뇨 의심"], step: 0.1 },
+    chol:    { name: "총콜레스테롤", unit: "mg/dL", cut: [200, 240], ref: [[240, "높음 240"]], words: ["정상", "경계", "높음"], step: 1 },
+    ldl:     { name: "LDL 콜레스테롤", unit: "mg/dL", cut: [130, 160], ref: [[160, "높음 160"]], words: ["적정", "경계", "높음"], step: 1 },
+    weight:  { name: "체중", unit: "kg", step: 0.1 },
+  };
+  const VT_KEYS = Object.keys(VT);
+  const SLOTS = ["아침", "점심", "저녁", "자기 전"];
+
+  const DEFAULTS = {
+    father: { label: "아버지", birthYear: 1957, sex: "M", smoker: false, liver: false, example: true, records: {} },
+    mother: { label: "어머니", birthYear: 1960, sex: "F", smoker: false, liver: false, example: true, records: {} },
+  };
+  const IDS = ["father", "mother"];
+  const VIEWS = [["checkup", "검진 체크"], ["meds", "복용 약"], ["vitals", "건강 수치"]];
+
+  // store.parents[id], store.meds[id] = {items}, store.vitals[id] = {entries}
+  const store = {
+    parents: { father: clone(DEFAULTS.father), mother: clone(DEFAULTS.mother) },
+    meds: { father: { items: [] }, mother: { items: [] } },
+    vitals: { father: { entries: [] }, mother: { entries: [] } },
+  };
+  let current = "father";
+  let view = "checkup";
+  try { const t = localStorage.getItem("pc-tab"); if (IDS.includes(t)) current = t; } catch (e) {}
+  try { const v = localStorage.getItem("pc-view"); if (VIEWS.some(x => x[0] === v)) view = v; } catch (e) {}
+
+  let pendingRender = false;
+  let charts = [];
+
+  // ---- 날짜 유틸 ----
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function addMonths(s, m) { const [y, mo, d] = s.split("-").map(Number); return iso(new Date(y, mo - 1 + m, d)); }
+  function daysBetween(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+  function fmt(s) { const [y, m, d] = s.split("-"); return y + "." + m + "." + d; }
+  function fmtShort(s) { const [y, m, d] = s.split("-"); return y.slice(2) + "." + m + "." + d; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function person(id) {
+    const p = store.parents[id];
+    return { ...p, age: YEAR - Number(p.birthYear) };
+  }
+
+  // 검진 항목 상태
+  function status(item, p, rec) {
+    const last = rec && rec.last;
+    if (last) {
+      if (item.interval === 0) return { cls: "ok", text: "접종 완료", meta: "마지막 " + fmt(last) };
+      const next = addMonths(last, item.interval);
+      const d = daysBetween(TODAY, next);
+      const meta = "마지막 " + fmt(last) + " · 다음 " + fmt(next);
+      if (d < 0) return { cls: "due", text: "기한 지남", meta, urgent: true };
+      if (d <= 60) return { cls: "soon", text: d + "일 남음", meta, urgent: true };
+      return { cls: "ok", text: "완료", meta };
+    }
+    if (item.biennial) {
+      const target = (YEAR % 2) === (Number(p.birthYear) % 2);
+      return target
+        ? { cls: "due", text: YEAR + "년 대상", meta: "올해 12월 31일까지 받으세요", urgent: true }
+        : { cls: "idle", text: (YEAR + 1) + "년 대상", meta: "올해는 국가검진 비대상 연도" };
+    }
+    return { cls: "soon", text: "기록 없음", meta: "언제 받으셨는지 날짜를 적어두세요", urgent: true };
+  }
+
+  // 약 처방 상태
+  function medStatus(m) {
+    if (!m.until) return { cls: "idle", text: "날짜 미입력" };
+    const d = daysBetween(TODAY, m.until);
+    if (d < 0) return { cls: "due", text: "약 떨어짐", urgent: true };
+    if (d <= 7) return { cls: "soon", text: d === 0 ? "오늘까지" : d + "일 남음", urgent: true };
+    return { cls: "ok", text: d + "일 남음" };
+  }
+
+  // 수치 판정: 0 정상, 1 주의, 2 높음
+  function level(t, v, v2) {
+    const T = VT[t]; if (!T.cut) return -1;
+    let l = v >= T.cut[1] ? 2 : v >= T.cut[0] ? 1 : 0;
+    if (T.two && v2 != null) l = Math.max(l, v2 >= T.cut2[1] ? 2 : v2 >= T.cut2[0] ? 1 : 0);
+    return l;
+  }
+
+  function counts(id) {
+    const p = person(id);
+    const checkup = ITEMS.filter(it => it.ok(p)).filter(it => status(it, p, p.records[it.k]).urgent).length;
+    const meds = store.meds[id].items.filter(m => medStatus(m).urgent).length;
+    return { checkup, meds, total: checkup + meds };
+  }
+
+  // ---- 렌더 ----
+  function render() {
+    if (isEditing()) { pendingRender = true; return; }
+    pendingRender = false;
+    document.getElementById("today").textContent = "오늘 " + fmt(TODAY);
+    renderTabs(); renderProfile(); renderViews();
+    const main = document.getElementById("main");
+    main.textContent = ""; charts = [];
+    if (view === "checkup") renderCheckup(main);
+    else if (view === "meds") renderMeds(main);
+    else renderVitals(main);
+    charts.forEach(c => c());
+  }
+  function isEditing() {
+    const a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+    return !!a.closest(".form") || (a.type !== "checkbox" && a.type !== "date");
+  }
+
+  function renderTabs() {
+    const box = document.getElementById("tabs");
+    box.textContent = "";
+    IDS.forEach(id => {
+      const p = person(id); const n = counts(id).total;
+      const b = el("button", "tab");
+      b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", id === current); b.id = "tab-" + id;
+      b.append(el("span", "tab-name", p.label || DEFAULTS[id].label));
+      b.append(el("span", "tab-age", p.birthYear + "년생 · 만 " + p.age + "세"));
+      const c = el("span", "tab-count" + (n ? "" : " clear"));
+      if (n) { c.append("챙길 것 "); c.append(el("b", "", String(n))); c.append("개"); } else c.textContent = "모두 챙겼어요";
+      b.append(c);
+      b.onclick = () => { current = id; try { localStorage.setItem("pc-tab", id); } catch (e) {} render(); };
+      box.append(b);
+    });
+  }
+
+  function renderViews() {
+    const box = document.getElementById("views");
+    box.textContent = "";
+    const c = counts(current);
+    VIEWS.forEach(([k, label]) => {
+      const b = el("button", "view-btn", label);
+      b.type = "button"; b.id = "view-" + k; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", k === view);
+      const n = k === "checkup" ? c.checkup : k === "meds" ? c.meds : 0;
+      if (n) b.append(el("span", "badge", String(n)));
+      b.onclick = () => { view = k; try { localStorage.setItem("pc-view", k); } catch (e) {} render(); };
+      box.append(b);
+    });
+  }
+
+  let profileOpen = null;
+  function renderProfile() {
+    const p = person(current);
+    const box = document.getElementById("profile");
+    box.textContent = "";
+    if (profileOpen === null) profileOpen = !!p.example;
+    box.open = profileOpen || !!p.example;
+    box.ontoggle = () => { profileOpen = box.open; };
+    box.append(el("summary", "", "기본 정보 · " + (p.sex === "F" ? "여성" : "남성") + ", " + p.birthYear + "년생"));
+    const body = el("div", "profile-body");
+    if (p.example) body.append(el("div", "example-note", "예시로 넣어둔 값이에요. 실제 출생연도와 해당 사항으로 바꿔주세요."));
+
+    const f = el("div", "fields");
+    f.append(field("호칭", input("text", "p-label-" + current, p.label, v => saveProfile({ label: v.trim() || DEFAULTS[current].label }), "blur")));
+    const yr = input("number", "p-year-" + current, p.birthYear, v => { const n = Number(v); if (n >= 1920 && n <= YEAR) saveProfile({ birthYear: n }); }, "blur");
+    yr.min = 1920; yr.max = YEAR; yr.inputMode = "numeric";
+    f.append(field("출생연도", yr));
+    const sx = select("p-sex-" + current, [["M", "남성"], ["F", "여성"]], p.sex);
+    sx.onchange = () => saveProfile({ sex: sx.value });
+    f.append(field("성별", sx));
+    body.append(f);
+
+    const ch = el("div", "checks");
+    ch.append(check("p-smoke-" + current, "흡연력 30갑년 이상 (폐암 검진 대상)", p.smoker, v => saveProfile({ smoker: v })));
+    ch.append(check("p-liver-" + current, "B·C형간염 또는 간경변 (간암 검진 대상)", p.liver, v => saveProfile({ liver: v })));
+    body.append(ch);
+
+    const target = (YEAR % 2) === (Number(p.birthYear) % 2);
+    const yn = el("div", "year-note");
+    yn.append(p.birthYear % 2 === 0 ? "짝수년생" : "홀수년생");
+    yn.append(" → 2년 주기 국가검진은 ");
+    yn.append(el("b", "", target ? YEAR + "년(올해)" : (YEAR + 1) + "년(내년)"));
+    yn.append(" 대상입니다.");
+    body.append(yn);
+    box.append(body);
+  }
+
+  // ---- 검진 체크 ----
+  function renderCheckup(box) {
+    const p = person(current);
+    GROUPS.forEach(gr => {
+      const items = ITEMS.filter(it => it.g === gr.g);
+      const on = items.filter(it => it.ok(p));
+      const off = items.filter(it => !it.ok(p));
+      const sec = el("section", "group");
+      sec.append(groupHead(gr.title, gr.sub));
+      const rows = el("div", "rows");
+      on.forEach(it => rows.append(checkupRow(it, p)));
+      sec.append(rows);
+      if (off.length) {
+        const d = el("details", "hidden-list");
+        d.append(el("summary", "", "해당 없는 항목 " + off.length + "개"));
+        const ul = el("ul");
+        off.forEach(it => ul.append(el("li", "", it.name + " — " + it.desc)));
+        d.append(ul); sec.append(d);
+      }
+      box.append(sec);
+    });
+  }
+
+  function checkupRow(it, p) {
+    const rec = p.records[it.k] || {};
+    const st = status(it, p, rec);
+    const r = el("div", "row");
+    const top = el("div", "row-top");
+    const t = el("div", "row-title");
+    t.append(el("strong", "", it.name));
+    t.append(el("small", "", it.desc + " · " + (it.interval === 0 ? "평생 1회" : it.interval >= 12 ? (it.interval / 12) + "년마다" : it.interval + "개월마다")));
+    top.append(t); top.append(el("span", "pill " + st.cls, st.text));
+    r.append(top);
+    r.append(el("div", "row-meta", st.meta));
+
+    const ed = el("div", "row-edit");
+    const di = input("date", "d-" + current + "-" + it.k, rec.last || "", v => saveRecord(it.k, { last: v || "" }), "change");
+    di.max = TODAY;
+    ed.append(field("받은 날짜", di));
+    const memo = field("메모 (병원·결과·예약)", input("text", "m-" + current + "-" + it.k, rec.note || "", v => saveRecord(it.k, { note: v }), "blur"));
+    memo.classList.add("memo");
+    ed.append(memo);
+    const btn = el("button", "btn", "오늘 받음");
+    btn.type = "button";
+    btn.onclick = () => saveRecord(it.k, { last: TODAY });
+    ed.append(btn);
+    r.append(ed);
+    return r;
+  }
+
+  // ---- 복용 약 ----
+  function renderMeds(box) {
+    const items = store.meds[current].items;
+    const name = person(current).label;
+
+    const daily = el("section", "group");
+    daily.append(groupHead("하루 복용표", name + "께서 드시는 시간별 약"));
+    if (items.length) {
+      const g = el("div", "daily");
+      SLOTS.forEach(s => {
+        const c = el("div", "slot");
+        c.append(el("span", "slot-name", s));
+        const list = items.filter(m => (m.times || []).includes(s));
+        if (list.length) { const ul = el("ul"); list.forEach(m => ul.append(el("li", "", m.name + (m.dose ? " " + m.dose : "")))); c.append(ul); }
+        else c.append(el("span", "none", "없음"));
+        g.append(c);
+      });
+      daily.append(g);
+    } else {
+      daily.append(el("div", "empty", "아직 등록된 약이 없어요. 아래 '약 추가'에서 드시는 약을 하나씩 적어두면 시간별 복용표가 만들어져요."));
+    }
+    box.append(daily);
+
+    if (items.length) {
+      const sec = el("section", "group");
+      sec.append(groupHead("약 목록", "약이 떨어지기 7일 전부터 알려드려요"));
+      const rows = el("div", "rows");
+      items.slice().sort((a, b) => (a.until || "9999").localeCompare(b.until || "9999")).forEach(m => rows.append(medRow(m)));
+      sec.append(rows);
+      box.append(sec);
+    }
+    box.append(medForm());
+  }
+
+  function medRow(m) {
+    const st = medStatus(m);
+    const r = el("div", "row");
+    const top = el("div", "row-top");
+    const t = el("div", "row-title");
+    t.append(el("strong", "", m.name + (m.dose ? " · " + m.dose : "")));
+    const sub = [m.purpose, m.hospital].filter(Boolean).join(" · ");
+    if (sub) t.append(el("small", "", sub));
+    top.append(t); top.append(el("span", "pill " + st.cls, st.text));
+    r.append(top);
+    if ((m.times || []).length) {
+      const chips = el("div", "chips");
+      m.times.forEach(x => chips.append(el("span", "chip", x)));
+      r.append(chips);
+    }
+    const ed = el("div", "med-edit");
+    const di = input("date", "mu-" + current + "-" + m.id, m.until || "", v => updateMed(m.id, { until: v }), "change");
+    ed.append(field("약 떨어지는 날 (다음 처방일)", di));
+    ed.append(deleteBtn(() => deleteMed(m.id)));
+    r.append(ed);
+    return r;
+  }
+
+  function medForm() {
+    const f = el("form", "form");
+    f.id = "med-form";
+    f.append(el("h3", "", "약 추가"));
+    const grid = el("div", "fields");
+    const nm = input("text", "mf-name", "", null); nm.placeholder = "예: 아모디핀"; nm.required = true;
+    grid.append(field("약 이름", nm));
+    const ds = input("text", "mf-dose", "", null); ds.placeholder = "예: 5mg 1알";
+    grid.append(field("용량", ds));
+    const pu = input("text", "mf-purpose", "", null); pu.placeholder = "예: 혈압약";
+    grid.append(field("무슨 약", pu));
+    const ho = input("text", "mf-hospital", "", null); ho.placeholder = "예: 동네 내과";
+    grid.append(field("병원·약국", ho));
+    const un = input("date", "mf-until", "", null);
+    grid.append(field("약 떨어지는 날", un));
+    f.append(grid);
+    const times = el("div", "checks");
+    times.setAttribute("role", "group"); times.setAttribute("aria-label", "복용 시간");
+    SLOTS.forEach((s, i) => times.append(check("mf-t" + i, s, false, null)));
+    f.append(field("복용 시간", times, true));
+    const act = el("div", "form-actions");
+    const sb = el("button", "btn primary", "약 추가"); sb.type = "submit";
+    const msg = el("span", "form-msg");
+    act.append(sb, msg);
+    f.append(act);
+    f.addEventListener("submit", e => {
+      e.preventDefault();
+      if (!nm.value.trim()) { msg.textContent = "약 이름을 적어주세요."; nm.focus(); return; }
+      const m = {
+        id: uid(), name: nm.value.trim(), dose: ds.value.trim(), purpose: pu.value.trim(), hospital: ho.value.trim(),
+        until: un.value, times: SLOTS.filter((s, i) => document.getElementById("mf-t" + i).checked),
+      };
+      store.meds[current].items.push(m);
+      persist("meds", current);
+      document.activeElement && document.activeElement.blur();
+      render();
+    });
+    return f;
+  }
+  function updateMed(mid, patch) {
+    const m = store.meds[current].items.find(x => x.id === mid); if (!m) return;
+    if (Object.keys(patch).every(k => (m[k] || "") === (patch[k] || ""))) return;
+    Object.assign(m, patch); persist("meds", current); render();
+  }
+  function deleteMed(mid) {
+    store.meds[current].items = store.meds[current].items.filter(x => x.id !== mid);
+    persist("meds", current); render();
+  }
+
+  // ---- 건강 수치 ----
+  function renderVitals(box) {
+    const entries = store.vitals[current].entries;
+    const used = VT_KEYS.filter(k => entries.some(e => e.t === k));
+    if (!used.length) {
+      box.append(el("div", "empty", "아직 기록된 수치가 없어요. 아래에서 혈압이나 혈당을 적으면, 두 번째 기록부터 변화 그래프가 그려져요. 검진 결과지의 수치를 옮겨 적어도 좋아요."));
+    }
+    used.forEach(k => box.append(vitalCard(k, entries.filter(e => e.t === k).sort((a, b) => a.d.localeCompare(b.d)))));
+    box.append(vitalForm());
+  }
+
+  function vitalCard(k, list) {
+    const T = VT[k];
+    const c = el("section", "vcard");
+    const head = el("div", "vhead");
+    const left = el("div", "");
+    left.append(el("div", "vtitle", T.name));
+    const last = list[list.length - 1];
+    const lt = el("div", "vlatest");
+    lt.append(el("span", "big", T.two ? last.v + "/" + last.v2 : String(last.v)));
+    lt.append(el("span", "unit", T.unit));
+    lt.append(el("span", "when", "최근 " + fmt(last.d)));
+    left.append(lt);
+    head.append(left);
+    const lv = level(k, last.v, last.v2);
+    if (lv >= 0) head.append(el("span", "pill " + ["ok", "soon", "due"][lv], T.words[lv]));
+    c.append(head);
+
+    if (list.length >= 2) {
+      if (T.two) {
+        const lg = el("div", "legend");
+        [["--s1", T.labels[0]], ["--s2", T.labels[1]]].forEach(([v, n]) => { const s = el("span"); const i = el("i"); i.style.background = "var(" + v + ")"; s.append(i, n); lg.append(s); });
+        c.append(lg);
+      }
+      const holder = el("div", "chart");
+      c.append(holder);
+      charts.push(() => drawChart(holder, k, list));
+    } else {
+      c.append(el("div", "guide", "기록이 하나 더 생기면 변화 그래프가 나타나요."));
+    }
+
+    const det = el("details", "vlog");
+    det.append(el("summary", "", "기록 " + list.length + "개 보기"));
+    const wrap = el("div", "vtable-wrap");
+    const tb = el("table", "vtable");
+    const hr = el("tr"); ["날짜", "수치", "판정", "메모", ""].forEach(h => hr.append(el("th", "", h)));
+    const thead = el("thead"); thead.append(hr); tb.append(thead);
+    const tbody = el("tbody");
+    list.slice().reverse().forEach(e => {
+      const tr = el("tr");
+      tr.append(el("td", "n", fmt(e.d)));
+      tr.append(el("td", "n", (T.two ? e.v + "/" + e.v2 : e.v) + " " + T.unit));
+      const l = level(k, e.v, e.v2);
+      const td = el("td"); if (l >= 0) td.append(el("span", "pill " + ["ok", "soon", "due"][l], T.words[l])); tr.append(td);
+      tr.append(el("td", "", e.note || ""));
+      const dt = el("td"); dt.append(deleteBtn(() => deleteVital(e.id))); tr.append(dt);
+      tbody.append(tr);
+    });
+    tb.append(tbody); wrap.append(tb); det.append(wrap);
+    c.append(det);
+    return c;
+  }
+
+  function vitalForm() {
+    const f = el("form", "form");
+    f.id = "vital-form";
+    f.append(el("h3", "", "수치 기록"));
+    const grid = el("div", "fields");
+    let t = "bp";
+    try { const s = localStorage.getItem("pc-vt"); if (VT[s]) t = s; } catch (e) {}
+    const ty = select("vf-type", VT_KEYS.map(k => [k, VT[k].name + " (" + VT[k].unit + ")"]), t);
+    grid.append(field("항목", ty));
+    const dt = input("date", "vf-date", TODAY, null); dt.max = TODAY;
+    grid.append(field("날짜", dt));
+    const v1 = input("number", "vf-v1", "", null); v1.inputMode = "decimal";
+    const f1 = field("", v1);
+    grid.append(f1);
+    const v2 = input("number", "vf-v2", "", null); v2.inputMode = "numeric";
+    const f2 = field("이완기 (아래 혈압)", v2);
+    grid.append(f2);
+    const nt = input("text", "vf-note", "", null); nt.placeholder = "예: 아침 식전, 검진 결과";
+    grid.append(field("메모", nt));
+    f.append(grid);
+    function sync() {
+      const T = VT[ty.value];
+      f1.querySelector("label").textContent = T.two ? "수축기 (위 혈압)" : T.name + " (" + T.unit + ")";
+      v1.step = T.step; f2.hidden = !T.two;
+    }
+    ty.onchange = () => { sync(); try { localStorage.setItem("pc-vt", ty.value); } catch (e) {} };
+    sync();
+    const act = el("div", "form-actions");
+    const sb = el("button", "btn primary", "기록하기"); sb.type = "submit";
+    const msg = el("span", "form-msg");
+    act.append(sb, msg); f.append(act);
+    f.addEventListener("submit", e => {
+      e.preventDefault();
+      const T = VT[ty.value];
+      const a = parseFloat(v1.value), b = parseFloat(v2.value);
+      if (!dt.value) { msg.textContent = "날짜를 골라주세요."; return; }
+      if (!(a > 0)) { msg.textContent = "수치를 숫자로 적어주세요."; v1.focus(); return; }
+      if (T.two && !(b > 0)) { msg.textContent = "이완기(아래 혈압)도 적어주세요."; v2.focus(); return; }
+      const entry = { id: uid(), t: ty.value, d: dt.value, v: a, note: nt.value.trim() };
+      if (T.two) entry.v2 = b;
+      store.vitals[current].entries.push(entry);
+      persist("vitals", current);
+      document.activeElement && document.activeElement.blur();
+      render();
+    });
+    return f;
+  }
+  function deleteVital(vid) {
+    store.vitals[current].entries = store.vitals[current].entries.filter(x => x.id !== vid);
+    persist("vitals", current); render();
+  }
+
+  // ---- 차트 (SVG, 한 차트에 한 축) ----
+  const NS = "http://www.w3.org/2000/svg";
+  function svg(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.append(e); return e; }
+
+  function drawChart(holder, k, list) {
+    holder.textContent = "";
+    const T = VT[k];
+    const W = Math.max(260, holder.clientWidth || 600), H = 190;
+    const m = { l: 40, r: T.two ? 52 : 28, t: 14, b: 26 };
+    const xs = list.map(e => new Date(e.d).getTime());
+    let x0 = Math.min(...xs), x1 = Math.max(...xs); if (x0 === x1) { x0 -= 864e5; x1 += 864e5; }
+    let vals = list.map(e => e.v); if (T.two) vals = vals.concat(list.map(e => e.v2));
+    (T.ref || []).forEach(r => vals.push(r[0]));
+    let y0 = Math.min(...vals), y1 = Math.max(...vals);
+    const pad = (y1 - y0) * 0.12 || Math.abs(y1) * 0.1 || 1; y0 -= pad; y1 += pad;
+    const tick = niceStep((y1 - y0) / 4);
+    y0 = Math.floor(y0 / tick) * tick; y1 = Math.ceil(y1 / tick) * tick;
+    const X = t => m.l + (t - x0) / (x1 - x0) * (W - m.l - m.r);
+    const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+    const s = svg("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": T.name + " 변화 그래프" }, holder);
+
+    for (let v = y0; v <= y1 + 1e-9; v += tick) {
+      svg("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }, s);
+      const tx = svg("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 11, fill: "var(--muted)", "font-family": "var(--f-num)" }, s);
+      tx.textContent = +v.toFixed(2);
+    }
+    (T.ref || []).forEach(([v, lab]) => {
+      svg("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: "var(--due)", "stroke-width": 1, "stroke-dasharray": "4 4", opacity: .7 }, s);
+      const tx = svg("text", { x: (m.l + W - m.r) / 2, y: Y(v) - 4, "text-anchor": "middle", "font-size": 11, fill: "var(--due)" }, s);
+      tx.textContent = lab;
+    });
+    const dl = svg("text", { x: m.l, y: H - 6, "font-size": 11, fill: "var(--muted)", "font-family": "var(--f-num)" }, s); dl.textContent = fmtShort(list[0].d);
+    const dr = svg("text", { x: W - m.r, y: H - 6, "text-anchor": "end", "font-size": 11, fill: "var(--muted)", "font-family": "var(--f-num)" }, s); dr.textContent = fmtShort(list[list.length - 1].d);
+
+    const series = T.two ? [["v", "var(--s1)", T.labels[0]], ["v2", "var(--s2)", T.labels[1]]] : [["v", "var(--s2)", T.name]];
+    series.forEach(([f, col, lab]) => {
+      const d = list.map((e, i) => (i ? "L" : "M") + X(xs[i]).toFixed(1) + " " + Y(e[f]).toFixed(1)).join(" ");
+      svg("path", { d, fill: "none", stroke: col, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, s);
+      list.forEach((e, i) => svg("circle", { cx: X(xs[i]), cy: Y(e[f]), r: 4, fill: col, stroke: "var(--paper)", "stroke-width": 2 }, s));
+      const le = list[list.length - 1];
+      if (T.two) {
+        const tx = svg("text", { x: X(xs[xs.length - 1]) + 8, y: Y(le[f]) + 4, "font-size": 12, fill: "var(--ink)" }, s);
+        tx.textContent = lab;
+      }
+    });
+
+    // 호버: 세로선 + 툴팁
+    const guide = svg("line", { y1: m.t, y2: H - m.b, stroke: "var(--muted)", "stroke-width": 1, opacity: 0 }, s);
+    const tip = el("div", "tip"); tip.hidden = true; holder.append(tip);
+    const hit = svg("rect", { x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: "transparent" }, s);
+    function show(evt) {
+      const r = s.getBoundingClientRect(); const sx = (evt.clientX - r.left) * (W / r.width);
+      let bi = 0, bd = Infinity; xs.forEach((t, i) => { const dd = Math.abs(X(t) - sx); if (dd < bd) { bd = dd; bi = i; } });
+      const e = list[bi]; const gx = X(xs[bi]);
+      guide.setAttribute("x1", gx); guide.setAttribute("x2", gx); guide.setAttribute("opacity", .5);
+      tip.textContent = fmt(e.d) + "  " + (T.two ? e.v + "/" + e.v2 : e.v) + " " + T.unit;
+      tip.hidden = false;
+      const topV = T.two ? Math.max(e.v, e.v2) : e.v;
+      const px = gx * r.width / W; const half = (tip.offsetWidth || 120) / 2;
+      tip.style.left = Math.min(Math.max(px, half), r.width - half) + "px";
+      tip.style.top = (Y(topV) * r.height / H - 10) + "px";
+    }
+    function hide() { tip.hidden = true; guide.setAttribute("opacity", 0); }
+    hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", hide);
+  }
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+  }
+  document.addEventListener("focusout", () => setTimeout(() => { if (pendingRender) render(); }, 0));
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (view === "vitals") render(); }, 150); });
+
+  // ---- 작은 DOM 헬퍼 ----
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function groupHead(title, sub) { const h = el("div", "group-head"); h.append(el("h2", "", title)); h.append(el("span", "", sub)); return h; }
+  function field(label, control, isGroup) {
+    const f = el("div", "field");
+    const l = el(isGroup ? "span" : "label", isGroup ? "lab" : "", label);
+    if (!isGroup) l.htmlFor = control.id;
+    f.append(l, control); return f;
+  }
+  function input(type, id, value, onSave, evt) {
+    const i = el("input"); i.type = type; i.id = id; i.value = value;
+    if (onSave) {
+      i.addEventListener(evt, () => onSave(i.value));
+      if (evt === "blur") i.addEventListener("keydown", e => { if (e.key === "Enter") i.blur(); });
+    }
+    return i;
+  }
+  function select(id, opts, val) {
+    const s = el("select"); s.id = id;
+    opts.forEach(([v, t]) => { const o = el("option", "", t); o.value = v; if (v === val) o.selected = true; s.append(o); });
+    return s;
+  }
+  function check(id, label, val, onSave) {
+    const w = el("div", "check"); const i = el("input"); i.type = "checkbox"; i.id = id; i.checked = !!val;
+    if (onSave) i.onchange = () => onSave(i.checked);
+    const l = el("label", "", label); l.htmlFor = id; w.append(i, l); return w;
+  }
+  function deleteBtn(onConfirm) {
+    const b = el("button", "btn quiet", "삭제"); b.type = "button"; let timer;
+    b.onclick = () => {
+      if (b.classList.contains("armed")) { clearTimeout(timer); onConfirm(); return; }
+      b.classList.add("armed"); b.textContent = "한 번 더 누르면 삭제";
+      timer = setTimeout(() => { b.classList.remove("armed"); b.textContent = "삭제"; }, 3000);
+    };
+    return b;
+  }
+
+  // ---- 저장 ----
+  function saveProfile(patch) {
+    const cur = store.parents[current];
+    const changed = Object.keys(patch).some(k => cur[k] !== patch[k]);
+    if (!changed && !cur.example) return;
+    Object.assign(cur, patch, { example: false });
+    persist("parents", current); render();
+  }
+  function saveRecord(k, patch) {
+    const cur = store.parents[current];
+    const rec = Object.assign({}, cur.records[k] || {});
+    const changed = Object.keys(patch).some(x => (rec[x] || "") !== (patch[x] || ""));
+    if (!changed) return;
+    Object.assign(rec, patch, { updated: TODAY });
+    cur.records[k] = rec;
+    persist("parents", current); render();
+  }
+
+  const COLLS = ["parents", "meds", "vitals"];
+  function persist(coll, id) {
+    try {
+      localStorage.setItem("pc-" + coll + "-" + id, JSON.stringify(store[coll][id]));
+      setSync("live", "이 브라우저에 자동 저장됨");
+    } catch (e) {
+      setSync("err", "저장하지 못했어요. 사생활 보호(시크릿) 모드라면 일반 창에서 열어주세요");
+    }
+  }
+  function setSync(cls, text) { const s = document.getElementById("sync"); s.className = "sync " + cls; s.textContent = text; }
+
+  function merge(coll, id, data) {
+    if (coll === "parents") { const v = Object.assign(clone(DEFAULTS[id]), data); v.records = Object.assign({}, data.records || {}); return v; }
+    if (coll === "meds") return { items: Array.isArray(data.items) ? clone(data.items) : [] };
+    return { entries: Array.isArray(data.entries) ? clone(data.entries) : [] };
+  }
+
+  // 이 기기 사본 먼저 (예전 버전 키 'pc-father'도 읽음)
+  IDS.forEach(id => {
+    COLLS.forEach(coll => {
+      try {
+        const raw = localStorage.getItem("pc-" + coll + "-" + id) || (coll === "parents" ? localStorage.getItem("pc-" + id) : null);
+        const v = JSON.parse(raw); if (v) store[coll][id] = merge(coll, id, v);
+      } catch (e) {}
+    });
+  });
+  setSync("live", "이 브라우저에 자동 저장돼요");
+  render();
+
+  // ---- 백업 파일 저장·불러오기 ----
+  const bMsg = document.getElementById("backup-msg");
+  function backupNote(text, err) { bMsg.textContent = text; bMsg.className = "backup-msg" + (err ? " err" : ""); }
+  document.getElementById("backup-save").onclick = () => {
+    const data = { app: "parents-health-notebook", version: 1, saved: TODAY, store };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    const a = el("a"); a.href = url; a.download = "parents-health-backup-" + TODAY + ".json";
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    backupNote(TODAY + " 백업 파일을 저장했어요. 다운로드 폴더를 확인하세요.");
+  };
+  let incoming = null;
+  const fileIn = document.getElementById("backup-file");
+  const confirmBox = document.getElementById("backup-confirm");
+  fileIn.onchange = () => {
+    const f = fileIn.files[0]; fileIn.value = "";
+    if (!f) return;
+    f.text().then(t => {
+      const d = JSON.parse(t);
+      if (!d || d.app !== "parents-health-notebook" || !d.store) throw new Error("bad");
+      incoming = d;
+      document.getElementById("backup-confirm-text").textContent = (d.saved ? fmt(d.saved) + "에 만든 " : "") + "백업이에요. 지금 이 브라우저의 기록을 모두 이 백업으로 바꿀까요?";
+      confirmBox.hidden = false; backupNote("");
+    }).catch(() => backupNote("이 수첩의 백업 파일이 아니에요. 'parents-health-backup-날짜.json' 파일을 골라주세요.", true));
+  };
+  document.getElementById("backup-cancel").onclick = () => { incoming = null; confirmBox.hidden = true; };
+  document.getElementById("backup-apply").onclick = () => {
+    if (!incoming) return;
+    IDS.forEach(id => COLLS.forEach(coll => {
+      const v = incoming.store[coll] && incoming.store[coll][id];
+      if (v) { store[coll][id] = merge(coll, id, v); persist(coll, id); }
+    }));
+    incoming = null; confirmBox.hidden = true;
+    backupNote("백업에서 기록을 불러왔어요.");
+    render();
+  };
+})();
+</script>
+</body>
+</html>
